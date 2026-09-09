@@ -1,0 +1,121 @@
+/**
+ * sre_c_ko_zec.js
+ * White Hat Rabbit Studios - Zero-Dependency Local Security Audit Engine
+ * Variant Analysis & Memory Hygiene Scanner for V4 Client Environments
+ */
+
+const SreckoZec = (() => {
+  'use strict';
+
+  // Registrovana pravila (Local Variant Analysis)
+  const RULES = [
+    {
+      id: 'SEC-001',
+      name: 'Dangerous Eval/Function Injection',
+      severity: 'CRITICAL',
+      pattern: /(eval\s*\(|new\s+Function\s*\(|setTimeout\s*\(\s*["'`]|setInterval\s*\(\s*["'`])/g,
+      description: 'Zabranjeno dinamičko izvršavanje stringova kao koda.'
+    },
+    {
+      id: 'SEC-002',
+      name: 'Unsanitized innerHTML / outerHTML',
+      severity: 'HIGH',
+      pattern: /(\.innerHTML\s*=\s*|\.outerHTML\s*=\s*|document\.write\s*\()/g,
+      description: 'Direktno ubacivanje HTML-a podložno XSS ranjivostima; koristi textContent ili DOM elemente.'
+    },
+    {
+      id: 'SEC-003',
+      name: 'Memory Leak / Unrevoked ObjectURL',
+      severity: 'MEDIUM',
+      customCheck: (code) => {
+        const created = (code.match(/URL\.createObjectURL/g) || []).length;
+        const revoked = (code.match(/URL\.revokeObjectURL/g) || []).length;
+        return created > revoked ? `Detektovano ${created} kreiranja i samo ${revoked} opoziva ObjectURL-a.` : null;
+      },
+      description: 'Svaki privremeni in-memory Blob URL mora biti opozvan radi sprečavanja curenja memorije.'
+    },
+    {
+      id: 'SEC-004',
+      name: 'Hardcoded Secrets / Tokens',
+      severity: 'CRITICAL',
+      pattern: /(ghp_[a-zA-Z0-9]{36}|github_pat_[a-zA-Z0-9_]{82}|(?:api[_-]?key|secret|token|password)\s*[:=]\s*["'][a-zA-Z0-9_\-]{8,}["'])/gi,
+      description: 'Detektovan potencijalni hardkodovani API ključ ili token.'
+    },
+    {
+      id: 'SEC-005',
+      name: 'External Remote Dependency Injection',
+      severity: 'HIGH',
+      pattern: /(src|href)\s*=\s*["']https?:\/\/(?!localhost|127\.0\.0\.1)[^"']+\.(js|css)["']/gi,
+      description: 'Narušavanje zero-dependency standarda uvozom eksternih CDN skripti/stilova.'
+    }
+  ];
+
+  // Interni log revizije
+  let auditLog = [];
+
+  function scan(fileContent, filename = 'nepoznat_fajl.js') {
+    const findings = [];
+    const lines = fileContent.split('\n');
+
+    RULES.forEach((rule) => {
+      if (rule.pattern) {
+        lines.forEach((line, idx) => {
+          if (rule.pattern.test(line)) {
+            findings.push({
+              ruleId: rule.id,
+              name: rule.name,
+              severity: rule.severity,
+              file: filename,
+              line: idx + 1,
+              snippet: line.trim()
+            });
+          }
+        });
+      }
+
+      if (rule.customCheck) {
+        const customResult = rule.customCheck(fileContent);
+        if (customResult) {
+          findings.push({
+            ruleId: rule.id,
+            name: rule.name,
+            severity: rule.severity,
+            file: filename,
+            line: 'GLOBAL',
+            snippet: customResult
+          });
+        }
+      }
+    });
+
+    const report = {
+      timestamp: new Date().toISOString(),
+      file: filename,
+      passed: findings.length === 0,
+      totalIssues: findings.length,
+      findings: findings
+    };
+
+    auditLog.push(report);
+    return report;
+  }
+
+  function getAuditHistory() {
+    return auditLog;
+  }
+
+  function clearHistory() {
+    auditLog = [];
+  }
+
+  return {
+    scan,
+    getAuditHistory,
+    clearHistory,
+    version: '4.0.0-srecko'
+  };
+})();
+
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = SreckoZec;
+}
