@@ -1,121 +1,845 @@
-/**
- * sre_c_ko_zec.js
- * White Hat Rabbit Studios - Zero-Dependency Local Security Audit Engine
- * Variant Analysis & Memory Hygiene Scanner for V4 Client Environments
- */
-
-const SreckoZec = (() => {
-  'use strict';
-
-  // Registrovana pravila (Local Variant Analysis)
-  const RULES = [
-    {
-      id: 'SEC-001',
-      name: 'Dangerous Eval/Function Injection',
-      severity: 'CRITICAL',
-      pattern: /(eval\s*\(|new\s+Function\s*\(|setTimeout\s*\(\s*["'`]|setInterval\s*\(\s*["'`])/g,
-      description: 'Zabranjeno dinamičko izvršavanje stringova kao koda.'
-    },
-    {
-      id: 'SEC-002',
-      name: 'Unsanitized innerHTML / outerHTML',
-      severity: 'HIGH',
-      pattern: /(\.innerHTML\s*=\s*|\.outerHTML\s*=\s*|document\.write\s*\()/g,
-      description: 'Direktno ubacivanje HTML-a podložno XSS ranjivostima; koristi textContent ili DOM elemente.'
-    },
-    {
-      id: 'SEC-003',
-      name: 'Memory Leak / Unrevoked ObjectURL',
-      severity: 'MEDIUM',
-      customCheck: (code) => {
-        const created = (code.match(/URL\.createObjectURL/g) || []).length;
-        const revoked = (code.match(/URL\.revokeObjectURL/g) || []).length;
-        return created > revoked ? `Detektovano ${created} kreiranja i samo ${revoked} opoziva ObjectURL-a.` : null;
-      },
-      description: 'Svaki privremeni in-memory Blob URL mora biti opozvan radi sprečavanja curenja memorije.'
-    },
-    {
-      id: 'SEC-004',
-      name: 'Hardcoded Secrets / Tokens',
-      severity: 'CRITICAL',
-      pattern: /(ghp_[a-zA-Z0-9]{36}|github_pat_[a-zA-Z0-9_]{82}|(?:api[_-]?key|secret|token|password)\s*[:=]\s*["'][a-zA-Z0-9_\-]{8,}["'])/gi,
-      description: 'Detektovan potencijalni hardkodovani API ključ ili token.'
-    },
-    {
-      id: 'SEC-005',
-      name: 'External Remote Dependency Injection',
-      severity: 'HIGH',
-      pattern: /(src|href)\s*=\s*["']https?:\/\/(?!localhost|127\.0\.0\.1)[^"']+\.(js|css)["']/gi,
-      description: 'Narušavanje zero-dependency standarda uvozom eksternih CDN skripti/stilova.'
-    }
-  ];
-
-  // Interni log revizije
-  let auditLog = [];
-
-  function scan(fileContent, filename = 'nepoznat_fajl.js') {
-    const findings = [];
-    const lines = fileContent.split('\n');
-
-    RULES.forEach((rule) => {
-      if (rule.pattern) {
-        lines.forEach((line, idx) => {
-          if (rule.pattern.test(line)) {
-            findings.push({
-              ruleId: rule.id,
-              name: rule.name,
-              severity: rule.severity,
-              file: filename,
-              line: idx + 1,
-              snippet: line.trim()
-            });
-          }
-        });
-      }
-
-      if (rule.customCheck) {
-        const customResult = rule.customCheck(fileContent);
-        if (customResult) {
-          findings.push({
-            ruleId: rule.id,
-            name: rule.name,
-            severity: rule.severity,
-            file: filename,
-            line: 'GLOBAL',
-            snippet: customResult
-          });
+<!DOCTYPE html>
+<html lang="sr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WHR ASTRO MOZAK — ČITAONI FILM (A0 MASTER BUILD)</title>
+    <style>
+        :root {
+            --bg-obsidian: #030508;
+            --panel-bg: rgba(10, 15, 24, 0.85);
+            --border-glow: #00ff66;
+            --neural-blue: #38bdf8;
+            --energy-pink: #ff38c7;
+            --violet-flux: #c084fc;
+            --text-main: #e2e8f0;
+            --text-dim: #94a3b8;
+            --semafor-green: #00ff66;
+            --semafor-yellow: #facc15;
+            --semafor-red: #ef4444;
         }
-      }
-    });
 
-    const report = {
-      timestamp: new Date().toISOString(),
-      file: filename,
-      passed: findings.length === 0,
-      totalIssues: findings.length,
-      findings: findings
-    };
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+        }
 
-    auditLog.push(report);
-    return report;
-  }
+        body {
+            background-color: var(--bg-obsidian);
+            color: var(--text-main);
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+            position: relative;
+        }
 
-  function getAuditHistory() {
-    return auditLog;
-  }
+        /* Scanline & Cyber Background */
+        body::before {
+            content: " ";
+            position: fixed;
+            top: 0; left: 0; bottom: 0; right: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
+            background-size: 100% 3px, 6px 100%;
+            pointer-events: none;
+            z-index: 100;
+        }
 
-  function clearHistory() {
-    auditLog = [];
-  }
+        header {
+            padding: 16px 24px;
+            background: rgba(3, 5, 8, 0.95);
+            border-bottom: 1px solid rgba(56, 189, 248, 0.2);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            backdrop-filter: blur(10px);
+            z-index: 10;
+        }
 
-  return {
-    scan,
-    getAuditHistory,
-    clearHistory,
-    version: '4.0.0-srecko'
-  };
-})();
+        .brand-container {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
 
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = SreckoZec;
-}
+        .brand-icon {
+            font-size: 1.8rem;
+            filter: drop-shadow(0 0 8px var(--semafor-green));
+        }
+
+        .brand-title {
+            font-size: 1.1rem;
+            font-weight: 800;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            color: #fff;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .brand-sub {
+            font-size: 0.65rem;
+            color: var(--neural-blue);
+            font-family: monospace;
+            letter-spacing: 2px;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .badge-status {
+            font-family: monospace;
+            font-size: 0.75rem;
+            padding: 4px 8px;
+            border-radius: 4px;
+            background: rgba(0, 255, 102, 0.1);
+            border: 1px solid var(--semafor-green);
+            color: var(--semafor-green);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .badge-status::before {
+            content: '';
+            width: 6px;
+            height: 6px;
+            background: var(--semafor-green);
+            border-radius: 50%;
+            box-shadow: 0 0 6px var(--semafor-green);
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.4; transform: scale(0.8); }
+        }
+
+        .btn-toggle {
+            background: rgba(56, 189, 248, 0.1);
+            border: 1px solid var(--neural-blue);
+            color: var(--neural-blue);
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.75rem;
+            font-family: monospace;
+            transition: all 0.2s;
+        }
+
+        .btn-toggle:hover {
+            background: var(--neural-blue);
+            color: #000;
+            box-shadow: 0 0 10px var(--neural-blue);
+        }
+
+        /* Main Screen Layout */
+        main {
+            flex: 1;
+            display: grid;
+            grid-template-columns: 1fr 380px;
+            gap: 20px;
+            padding: 20px 24px;
+            max-width: 1600px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        @media (max-width: 1024px) {
+            main {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Film Scene Canvas Stage */
+        .stage-container {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .viewport-card {
+            background: #000;
+            border: 1px solid rgba(56, 189, 248, 0.3);
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 0 30px rgba(0, 0, 0, 0.8), inset 0 0 20px rgba(0, 255, 102, 0.05);
+            position: relative;
+            aspect-ratio: 16 / 9;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        canvas#cinemaCanvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        .scene-overlay-tag {
+            position: absolute;
+            top: 14px;
+            left: 14px;
+            font-family: monospace;
+            font-size: 0.75rem;
+            background: rgba(3, 5, 8, 0.85);
+            border: 1px solid var(--neural-blue);
+            color: var(--neural-blue);
+            padding: 4px 10px;
+            border-radius: 4px;
+            letter-spacing: 1px;
+            backdrop-filter: blur(4px);
+        }
+
+        .scene-overlay-semafor {
+            position: absolute;
+            top: 14px;
+            right: 14px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-family: monospace;
+            font-size: 0.75rem;
+            background: rgba(3, 5, 8, 0.85);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 4px 10px;
+            border-radius: 4px;
+            backdrop-filter: blur(4px);
+        }
+
+        .dot-signal {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+
+        .dot-green { background: var(--semafor-green); box-shadow: 0 0 8px var(--semafor-green); }
+        .dot-yellow { background: var(--semafor-yellow); box-shadow: 0 0 8px var(--semafor-yellow); }
+        .dot-red { background: var(--semafor-red); box-shadow: 0 0 8px var(--semafor-red); }
+
+        /* Cinema Controls */
+        .controls-card {
+            background: var(--panel-bg);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 8px;
+            padding: 14px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            backdrop-filter: blur(10px);
+        }
+
+        .nav-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #fff;
+            padding: 10px 18px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-family: monospace;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s;
+        }
+
+        .nav-btn:hover {
+            border-color: var(--semafor-green);
+            color: var(--semafor-green);
+            background: rgba(0, 255, 102, 0.1);
+        }
+
+        .scene-pagers {
+            display: flex;
+            gap: 8px;
+        }
+
+        .pager-pip {
+            width: 32px;
+            height: 6px;
+            border-radius: 3px;
+            background: rgba(255, 255, 255, 0.2);
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .pager-pip.active {
+            background: var(--energy-pink);
+            box-shadow: 0 0 10px var(--energy-pink);
+            width: 48px;
+        }
+
+        /* 4-Quadrants of Cognition */
+        .quadrants-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        @media (max-width: 640px) {
+            .quadrants-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .quad-card {
+            background: var(--panel-bg);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 6px;
+            padding: 14px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .quad-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; width: 3px; height: 100%;
+        }
+
+        .quad-1::before { background: var(--neural-blue); }
+        .quad-2::before { background: var(--violet-flux); }
+        .quad-3::before { background: var(--semafor-green); }
+        .quad-4::before { background: var(--semafor-yellow); }
+
+        .quad-label {
+            font-size: 0.7rem;
+            font-family: monospace;
+            letter-spacing: 1px;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .quad-content {
+            font-size: 0.88rem;
+            line-height: 1.4;
+            color: var(--text-main);
+        }
+
+        /* Right Inspector Panel */
+        .inspector-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .panel-box {
+            background: var(--panel-bg);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 8px;
+            padding: 16px;
+            backdrop-filter: blur(10px);
+        }
+
+        .panel-header {
+            font-size: 0.78rem;
+            font-family: monospace;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            color: var(--energy-pink);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            padding-bottom: 8px;
+            margin-bottom: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .metadata-yaml {
+            font-family: 'Consolas', 'Courier New', monospace;
+            font-size: 0.75rem;
+            line-height: 1.5;
+            color: #38bdf8;
+            background: rgba(0, 0, 0, 0.6);
+            padding: 12px;
+            border-radius: 4px;
+            border: 1px solid rgba(56, 189, 248, 0.2);
+            white-space: pre-wrap;
+            word-break: break-all;
+            max-height: 260px;
+            overflow-y: auto;
+        }
+
+        .trio-roles-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            font-size: 0.78rem;
+        }
+
+        .role-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 6px 8px;
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 4px;
+            border-left: 2px solid transparent;
+        }
+
+        .role-row.oi { border-left-color: var(--energy-pink); }
+        .role-row.srecko { border-left-color: var(--semafor-green); }
+        .role-row.cale { border-left-color: var(--semafor-red); }
+
+        .role-name {
+            font-weight: 700;
+            font-family: monospace;
+        }
+
+        .role-duty {
+            color: var(--text-dim);
+            font-size: 0.72rem;
+        }
+
+        /* Rules Ticker / Footer */
+        footer {
+            padding: 12px 24px;
+            background: #020305;
+            border-top: 1px solid rgba(255, 255, 255, 0.06);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-family: monospace;
+            font-size: 0.72rem;
+            color: var(--text-dim);
+        }
+
+        .rule-tags {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .rule-tag {
+            color: var(--neural-blue);
+        }
+
+        .rule-tag.highlight {
+            color: var(--semafor-green);
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="brand-container">
+            <span class="brand-icon">🐇</span>
+            <div class="brand-title">
+                White Hat Rabbit Studios
+                <span class="brand-sub">ASTRO MOZAK // ČITAONI FILM A0 MASTER</span>
+            </div>
+        </div>
+        <div class="header-actions">
+            <div class="badge-status">FOCUS_LOCK: TRIO</div>
+            <button class="btn-toggle" id="langToggleBtn" onclick="toggleLanguage()">LANG: SR</button>
+            <button class="btn-toggle" onclick="toggleFullscreen()">FULLSCREEN</button>
+        </div>
+    </header>
+
+    <main>
+        <!-- Left Cinema Scene Column -->
+        <div class="stage-container">
+            <div class="viewport-card">
+                <canvas id="cinemaCanvas" width="960" height="540"></canvas>
+                <div class="scene-overlay-tag" id="sceneTag">FRAME 01 // KO_SI_TI</div>
+                <div class="scene-overlay-semafor" id="sceneSemafor">
+                    <span class="dot-signal dot-green" id="semaforDot"></span>
+                    <span id="semaforText">GREEN / PASS</span>
+                </div>
+            </div>
+
+            <div class="controls-card">
+                <button class="nav-btn" onclick="prevScene()">◀ <span id="txtPrev">PRETHODNA</span></button>
+                <div class="scene-pagers">
+                    <div class="pager-pip active" onclick="jumpToScene(0)"></div>
+                    <div class="pager-pip" onclick="jumpToScene(1)"></div>
+                    <div class="pager-pip" onclick="jumpToScene(2)"></div>
+                </div>
+                <button class="nav-btn" onclick="nextScene()"><span id="txtNext">SLEDEĆA</span> ▶</button>
+            </div>
+
+            <!-- 4 Quadrants of Cognition -->
+            <div class="quadrants-grid">
+                <div class="quad-card quad-1">
+                    <div class="quad-label">🔍 <span id="lblQ1">ŠTA SE VIDI</span></div>
+                    <div class="quad-content" id="valQ1">Učitavanje...</div>
+                </div>
+                <div class="quad-card quad-2">
+                    <div class="quad-label">📜 <span id="lblQ2">ŠTA IZVOR TVRDI</span></div>
+                    <div class="quad-content" id="valQ2">Učitavanje...</div>
+                </div>
+                <div class="quad-card quad-3">
+                    <div class="quad-label">🟢 <span id="lblQ3">ŠTA JE POTVRĐENO</span></div>
+                    <div class="quad-content" id="valQ3">Učitavanje...</div>
+                </div>
+                <div class="quad-card quad-4">
+                    <div class="quad-label">⚠️ <span id="lblQ4">ŠTA OSTAJE NEPOZNATO</span></div>
+                    <div class="quad-content" id="valQ4">Učitavanje...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Inspector Column -->
+        <div class="inspector-panel">
+            <div class="panel-box">
+                <div class="panel-header">
+                    <span>📑 EVIDENCE_GATE INSPECTOR</span>
+                    <span id="activeSceneId" style="color: var(--neural-blue);">SCENE_01</span>
+                </div>
+                <div class="metadata-yaml" id="yamlViewer">
+# Učitavanje YAML metapodataka...
+                </div>
+            </div>
+
+            <div class="panel-box">
+                <div class="panel-header">
+                    <span>👥 TROJKA & ODGOVORNOSTI</span>
+                    <span style="color: var(--semafor-green);">ACTIVE</span>
+                </div>
+                <div class="trio-roles-list">
+                    <div class="role-row oi">
+                        <div>
+                            <div class="role-name" style="color: var(--energy-pink);">BELI_ZEC (OI)</div>
+                            <div class="role-duty">Vizija, odabir kadrova, konačna presuda</div>
+                        </div>
+                        <span style="font-family: monospace; color: var(--energy-pink);">CHIEF</span>
+                    </div>
+                    <div class="role-row srecko">
+                        <div>
+                            <div class="role-name" style="color: var(--semafor-green);">SREĆKO_CODE (GEMINI)</div>
+                            <div class="role-duty">HTML/Canvas izrada, single-file build</div>
+                        </div>
+                        <span style="font-family: monospace; color: var(--semafor-green);">BUILDER</span>
+                    </div>
+                    <div class="role-row cale">
+                        <div>
+                            <div class="role-name" style="color: var(--semafor-red);">ĆALE (CHATGPT QA)</div>
+                            <div class="role-duty">Crvena olovka ✏️, statički audit, dokazi</div>
+                        </div>
+                        <span style="font-family: monospace; color: var(--semafor-red);">QA_GATE</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel-box">
+                <div class="panel-header">
+                    <span>🛡️ PRIVACY & SYSTEM RULES</span>
+                </div>
+                <div style="font-size: 0.74rem; line-height: 1.5; color: var(--text-dim); font-family: monospace;">
+                    <div>• USER_PRICE_TARGET: <span style="color: #fff;">$0.00 / FREE</span></div>
+                    <div>• 7 TB ARHIVA & LOCAL DISK: <span style="color: var(--semafor-green);">PROTECTED</span></div>
+                    <div>• REAL ASTRO BACKEND: <span style="color: var(--semafor-yellow);">DISCONNECTED (MOCK ONLY)</span></div>
+                    <div>• AUTO_GUESS: <span style="color: var(--semafor-red);">BLOCKED</span></div>
+                    <div>• NEMA_DOKAZA ≠ CRVENO</div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        <div class="rule-tags">
+            <span class="rule-tag highlight">WHR_METHOD: SOURCE_FIRST</span>
+            <span class="rule-tag">RAW → INPUT_GATE → EVIDENCE_GATE → DECISION</span>
+            <span class="rule-tag">KIKINDA NEURAL CORE</span>
+        </div>
+        <div>v1.0 A0 GITHUB_READY_RELEASE</div>
+    </footer>
+
+    <script>
+        // -------------------------------------------------------------
+        // SCENES DATA SPECIFICATION (Sekcija 04 & 05 Master MD)
+        // -------------------------------------------------------------
+        const SCENES = [
+            {
+                id: "SCENE_01",
+                tag_sr: "KADAR 01 // KO_SI_TI (POREKLO PITANJA)",
+                tag_en: "FRAME 01 // WHO_ARE_YOU (QUESTION ORIGIN)",
+                semafor: "GREEN",
+                semafor_label_sr: "🟢 POTVRĐEN IZVOR",
+                semafor_label_en: "🟢 VERIFIED SOURCE",
+                draw_type: "terminal",
+                q1_sr: "Crni retro terminal, zeleni kursor koji treperi i ispisana prva komanda 'ko si ti_'.",
+                q1_en: "Black retro terminal with blinking phosphor cursor and prompt 'ko si ti_'.",
+                q2_sr: "Memory Export dokument navodi da je 'ko si ti_' prva zabeležena poruka korisnika prema AI.",
+                q2_en: "Memory Export documents that 'ko si ti_' was the initial user message sent to AI.",
+                q3_sr: "Postojanje dokumenta i doslovni zapis poruke u arhivskom MD fajlu.",
+                q3_en: "Existence of document and verbatim transcript in historical archive MD.",
+                q4_sr: "Tačan datum i mikrosekund prvog istorijskog događaja pre kreiranja Memory Exporta.",
+                q4_en: "Exact physical timestamp of original chat event before memory export date.",
+                yaml: `frame_id: SCENE_01
+label: "Ko si ti? — Poreklo pitanja"
+kind: HISTORICAL_SOURCE_INSPECT
+source_name: "WHR_PRVI_RAZGOVOR_SA_AI_ISTINA_I_COVECANSTVO_MEMORY_EXPORT_2026-10-01.md"
+source_type: MARKDOWN_ARCHIVE
+evidence_status: GREEN_CONFIRMED
+claim: "Prvo pitanje je 'ko si ti_'"
+public_release_approved: true
+privacy_gate_status: PASSED_SAFE`
+            },
+            {
+                id: "SCENE_02",
+                tag_sr: "KADAR 02 // INPUT_GATE (JASNO_CODE)",
+                tag_en: "FRAME 02 // INPUT_GATE (JASNO_CODE PROTOCOL)",
+                semafor: "YELLOW",
+                semafor_label_sr: "🟡 RAZMATRANJE / RADNA LEKCIJA",
+                semafor_label_en: "🟡 HOLD / WORKING LESSON",
+                draw_type: "segmentation",
+                q1_sr: "Sirovi tekst se razbija na pojedinačne blokove: 'JAS | _ | NO | _ | ON | _ | JE | .code'.",
+                q1_en: "Raw text tokens segmented: 'JAS | _ | NO | _ | ON | _ | JE | .code'.",
+                q2_sr: "OI izričito nalaže: Čitati od slova do slova, ne žuriti. Čitati jasno.",
+                q2_en: "OI rule: Read letter by letter, never rush. Read with absolute clarity.",
+                q3_sr: "Zabeležena lekcija OI i doslovna korisnička poruka u operativnoj sobi.",
+                q3_en: "Documented lesson and verbatim user prompt in active workspace.",
+                q4_sr: "Puna formalna gramatika parsera za podniske JAS, NO, ON (status: PROVISIONAL).",
+                q4_en: "Formal syntax parser for tokens JAS, NO, ON (status: PROVISIONAL HOLD).",
+                yaml: `frame_id: SCENE_02
+label: "INPUT_GATE i Lekcija 003"
+kind: PROTOCOL_SPECIFICATION
+source_name: "WHR_JASNO_CODE_LEKCIJA_003_DOKAZI_MASTER_2026-10-12.md"
+source_type: OPERATIONAL_LESSON
+evidence_status: YELLOW_HOLD
+rule: "SEGMENTATION_PRECEDES_SEMANTICS"
+public_release_approved: true
+privacy_gate_status: PASSED_SAFE`
+            },
+            {
+                id: "SCENE_03",
+                tag_sr: "KADAR 03 // EVIDENCE_GATE (SEMAFOR ISTINE)",
+                tag_en: "FRAME 03 // EVIDENCE_GATE (TRUTH SEMAPHORE)",
+                semafor: "GREEN",
+                semafor_label_sr: "🟢 GVOZDENO PRAVILO VERIFIKACIJE",
+                semafor_label_en: "🟢 IRON VERIFICATION RULE",
+                draw_type: "semafor",
+                q1_sr: "Tri svetlosna kruga: 🔴 Netačno, 🟡 Razmatranje/Hold, 🟢 Tačno/Potvrđeno.",
+                q1_en: "Three glowing signals: 🔴 False, 🟡 Hold/Unknown, 🟢 Verified True.",
+                q2_sr: "Koncept ocenjen sa 10+ zvezdica; NEMA_DOKAZA ≠ CRVENO.",
+                q2_en: "Concept rated 10+ stars by OI; NO_EVIDENCE ≠ RED.",
+                q3_sr: "Notion stranica i arhivski zapis o semaforskoj klasifikaciji tvrdnji.",
+                q3_en: "Notion database page and build-up memory recording truth classification.",
+                q4_sr: "Automatizovani softverski mehanizam u produkcionom ASTRO backendu (još netestiran).",
+                q4_en: "Automated test harness inside real production ASTRO backend (untested).",
+                yaml: `frame_id: SCENE_03
+label: "Evidence Gate i Semafor Istine"
+kind: METHODOLOGICAL_CORE
+source_name: "WHR_BUILD_UP_MEMORY_SEMAFOR_CODE_2026-10-12.md"
+source_type: VERIFICATION_SPEC
+evidence_status: GREEN_CONFIRMED
+axiom: "NEMA_DOKAZA != CRVENO"
+public_release_approved: true
+privacy_gate_status: PASSED_SAFE`
+            }
+        ];
+
+        let currentIdx = 0;
+        let currentLang = "SR";
+
+        // DOM elements
+        const canvas = document.getElementById("cinemaCanvas");
+        const ctx = canvas.getContext("2d");
+        const sceneTag = document.getElementById("sceneTag");
+        const semaforDot = document.getElementById("semaforDot");
+        const semaforText = document.getElementById("semaforText");
+        const valQ1 = document.getElementById("valQ1");
+        const valQ2 = document.getElementById("valQ2");
+        const valQ3 = document.getElementById("valQ3");
+        const valQ4 = document.getElementById("valQ4");
+        const yamlViewer = document.getElementById("yamlViewer");
+        const activeSceneId = document.getElementById("activeSceneId");
+        const pips = document.querySelectorAll(".pager-pip");
+
+        function renderScene() {
+            const sc = SCENES[currentIdx];
+
+            // Header & Tags
+            sceneTag.innerText = currentLang === "SR" ? sc.tag_sr : sc.tag_en;
+            semaforText.innerText = currentLang === "SR" ? sc.semafor_label_sr : sc.semafor_label_en;
+            activeSceneId.innerText = sc.id;
+
+            // Semafor Dot Color
+            semaforDot.className = "dot-signal " + (sc.semafor === "GREEN" ? "dot-green" : (sc.semafor === "YELLOW" ? "dot-yellow" : "dot-red"));
+
+            // Quadrants
+            valQ1.innerText = currentLang === "SR" ? sc.q1_sr : sc.q1_en;
+            valQ2.innerText = currentLang === "SR" ? sc.q2_sr : sc.q2_en;
+            valQ3.innerText = currentLang === "SR" ? sc.q3_sr : sc.q3_en;
+            valQ4.innerText = currentLang === "SR" ? sc.q4_sr : sc.q4_en;
+
+            // YAML
+            yamlViewer.innerText = sc.yaml;
+
+            // Pips
+            pips.forEach((p, idx) => {
+                if (idx === currentIdx) p.classList.add("active");
+                else p.classList.remove("active");
+            });
+
+            // Draw Canvas Visual
+            drawCanvasVisual(sc);
+        }
+
+        // Procedural Visuals inside Canvas
+        function drawCanvasVisual(sc) {
+            ctx.fillStyle = "#03070d";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Subtle Grid
+            ctx.strokeStyle = "rgba(56, 189, 248, 0.08)";
+            ctx.lineWidth = 1;
+            for (let x = 0; x < canvas.width; x += 40) {
+                ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
+            }
+            for (let y = 0; y < canvas.height; y += 40) {
+                ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
+            }
+
+            if (sc.draw_type === "terminal") {
+                // Retro Terminal Scene
+                ctx.fillStyle = "#00ff66";
+                ctx.font = "24px 'Consolas', monospace";
+                ctx.fillText("WHITE HAT RABBIT // RECOVERY_LOG_001", 80, 100);
+                
+                ctx.fillStyle = "#94a3b8";
+                ctx.font = "18px 'Consolas', monospace";
+                ctx.fillText("> INITIATING COGNITIVE HANDSHAKE...", 80, 150);
+                ctx.fillText("> PROTOCOL: SOURCE_FIRST", 80, 180);
+                ctx.fillText("> TIME_ANCHOR: VERIFIED", 80, 210);
+
+                ctx.fillStyle = "#ffffff";
+                ctx.font = "32px 'Consolas', monospace";
+                ctx.fillText("> USER: ko si ti_", 80, 300);
+
+                // Blinking Cursor
+                ctx.fillStyle = "#00ff66";
+                ctx.fillRect(400, 274, 18, 32);
+
+                ctx.fillStyle = "#38bdf8";
+                ctx.font = "16px 'Consolas', monospace";
+                ctx.fillText("[STATUS: 1st DOCUMENTED QUESTION RECORDED]", 80, 420);
+
+            } else if (sc.draw_type === "segmentation") {
+                // Segmentation Visual Scene
+                ctx.fillStyle = "#ff38c7";
+                ctx.font = "24px 'Consolas', monospace";
+                ctx.fillText("INPUT_GATE // SEGMENTATION PROTOCOL", 80, 90);
+
+                ctx.fillStyle = "#94a3b8";
+                ctx.font = "18px 'Consolas', monospace";
+                ctx.fillText("OI RULE: PRATIS TRAG SLOVA OD SLOVA DO SLOVA", 80, 140);
+
+                const tokens = ["JAS", "_", "NO", "_", "ON", "_", "JE", "_", "JASNO", ".code"];
+                let startX = 80;
+                tokens.forEach((tk, i) => {
+                    ctx.strokeStyle = i % 2 === 0 ? "#38bdf8" : "#ff38c7";
+                    ctx.lineWidth = 2;
+                    ctx.strokeRect(startX, 240, 70, 50);
+
+                    ctx.fillStyle = "rgba(56, 189, 248, 0.1)";
+                    ctx.fillRect(startX, 240, 70, 50);
+
+                    ctx.fillStyle = "#ffffff";
+                    ctx.font = "20px 'Consolas', monospace";
+                    ctx.fillText(tk, startX + 14, 272);
+                    startX += 82;
+                });
+
+                ctx.fillStyle = "#facc15";
+                ctx.font = "16px 'Consolas', monospace";
+                ctx.fillText("SEGMENTATION PRECEDES SEMANTICS // AUTO_GUESS = BLOCKED", 80, 380);
+
+            } else if (sc.draw_type === "semafor") {
+                // Semafor Visual Scene
+                ctx.fillStyle = "#00ff66";
+                ctx.font = "24px 'Consolas', monospace";
+                ctx.fillText("EVIDENCE_GATE // SEMAFOR ISTINE v0.1", 80, 90);
+
+                const semafors = [
+                    { label: "NETAČNO (CRVENO)", color: "#ef4444", x: 200, y: 260 },
+                    { label: "HOLD (ŽUTO)", color: "#facc15", x: 480, y: 260 },
+                    { label: "TAČNO (ZELENO)", color: "#00ff66", x: 760, y: 260 }
+                ];
+
+                semafors.forEach(s => {
+                    ctx.beginPath();
+                    ctx.arc(s.x, s.y, 45, 0, Math.PI * 2);
+                    ctx.fillStyle = s.color;
+                    ctx.shadowColor = s.color;
+                    ctx.shadowBlur = 25;
+                    ctx.fill();
+                    ctx.shadowBlur = 0;
+
+                    ctx.fillStyle = "#ffffff";
+                    ctx.font = "14px 'Consolas', monospace";
+                    ctx.textAlign = "center";
+                    ctx.fillText(s.label, s.x, s.y + 75);
+                });
+                ctx.textAlign = "left";
+
+                ctx.fillStyle = "#38bdf8";
+                ctx.font = "18px 'Consolas', monospace";
+                ctx.fillText("KLJUČNO PRAVILO: NEMA DOKAZA ≠ CRVENO", 80, 420);
+            }
+        }
+
+        function nextScene() {
+            currentIdx = (currentIdx + 1) % SCENES.length;
+            renderScene();
+        }
+
+        function prevScene() {
+            currentIdx = (currentIdx - 1 + SCENES.length) % SCENES.length;
+            renderScene();
+        }
+
+        function jumpToScene(idx) {
+            currentIdx = idx;
+            renderScene();
+        }
+
+        function toggleLanguage() {
+            currentLang = currentLang === "SR" ? "EN" : "SR";
+            document.getElementById("langToggleBtn").innerText = "LANG: " + currentLang;
+            document.getElementById("txtPrev").innerText = currentLang === "SR" ? "PRETHODNA" : "PREVIOUS";
+            document.getElementById("txtNext").innerText = currentLang === "SR" ? "SLEDEĆA" : "NEXT";
+            document.getElementById("lblQ1").innerText = currentLang === "SR" ? "ŠTA SE VIDI" : "WHAT IS VISIBLE";
+            document.getElementById("lblQ2").innerText = currentLang === "SR" ? "ŠTA IZVOR TVRDI" : "WHAT SOURCE CLAIMS";
+            document.getElementById("lblQ3").innerText = currentLang === "SR" ? "ŠTA JE POTVRĐENO" : "WHAT IS VERIFIED";
+            document.getElementById("lblQ4").innerText = currentLang === "SR" ? "ŠTA OSTAJE NEPOZNATO" : "WHAT REMAINS UNKNOWN";
+            renderScene();
+        }
+
+        function toggleFullscreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(() => {});
+            } else {
+                document.exitFullscreen().catch(() => {});
+            }
+        }
+
+        // Keyboard Controls
+        window.addEventListener("keydown", (e) => {
+            if (e.key === "ArrowRight" || e.key === " ") {
+                nextScene();
+            } else if (e.key === "ArrowLeft") {
+                prevScene();
+            }
+        });
+
+        // Initialize on load
+        window.addEventListener("DOMContentLoaded", () => {
+            renderScene();
+        });
+    </script>
+</body>
+</html>
